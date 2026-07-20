@@ -1,0 +1,123 @@
+const path = require("path");
+require("dotenv").config();
+
+const config = {
+  enableHealthCheck: process.env.ENABLE_HEALTH_CHECK === "true",
+};
+
+function makeDevServerV5Compatible(devServerConfig) {
+  const {
+    https,
+    onAfterSetupMiddleware,
+    onBeforeSetupMiddleware,
+    onListening,
+    setupMiddlewares,
+    ...compatibleConfig
+  } = devServerConfig;
+
+  compatibleConfig.server =
+    typeof https === "object"
+      ? { type: "https", options: https }
+      : https
+      ? "https"
+      : "http";
+
+  compatibleConfig.headers = {
+    ...compatibleConfig.headers,
+    "Cross-Origin-Resource-Policy": "same-origin",
+  };
+
+  if (onBeforeSetupMiddleware || setupMiddlewares) {
+    compatibleConfig.setupMiddlewares = (middlewares, devServer) => {
+      if (onBeforeSetupMiddleware) {
+        onBeforeSetupMiddleware(devServer);
+      }
+
+      return setupMiddlewares
+        ? setupMiddlewares(middlewares, devServer)
+        : middlewares;
+    };
+  }
+
+  compatibleConfig.onListening = (devServer) => {
+    devServer.close ??= (callback) => devServer.stopCallback(callback);
+
+    if (onListening) {
+      onListening(devServer);
+    }
+
+    if (onAfterSetupMiddleware) {
+      onAfterSetupMiddleware(devServer);
+    }
+  };
+
+  return compatibleConfig;
+}
+
+let WebpackHealthPlugin;
+let setupHealthEndpoints;
+let healthPluginInstance;
+
+if (config.enableHealthCheck) {
+  WebpackHealthPlugin = require("./plugins/health-check/webpack-health-plugin");
+  setupHealthEndpoints = require("./plugins/health-check/health-endpoints");
+  healthPluginInstance = new WebpackHealthPlugin();
+}
+
+let webpackConfig = {
+  eslint: {
+    configure: {
+      extends: ["plugin:react-hooks/recommended"],
+      rules: {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
+      },
+    },
+  },
+
+  webpack: {
+    alias: {
+      "@": path.resolve(__dirname, "src"),
+    },
+
+    configure: (config) => {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          "**/node_modules/**",
+          "**/.git/**",
+          "**/build/**",
+          "**/dist/**",
+          "**/coverage/**",
+          "**/public/**",
+        ],
+      };
+
+      if (healthPluginInstance) {
+        config.plugins.push(healthPluginInstance);
+      }
+
+      return config;
+    },
+  },
+};
+
+webpackConfig.devServer = (devServerConfig) => {
+  if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
+    const original = devServerConfig.setupMiddlewares;
+
+    devServerConfig.setupMiddlewares = (middlewares, devServer) => {
+      if (original) {
+        middlewares = original(middlewares, devServer);
+      }
+
+      setupHealthEndpoints(devServer, healthPluginInstance);
+
+      return middlewares;
+    };
+  }
+
+  return makeDevServerV5Compatible(devServerConfig);
+};
+
+module.exports = webpackConfig;
