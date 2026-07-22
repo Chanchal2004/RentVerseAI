@@ -406,8 +406,10 @@ http://localhost:3000
 
 | Service | Link |
 |----------|------|
-| 🌍 Frontend (Vercel) | https://your-vercel-app.vercel.app |
-| ⚡ Backend API (Render) | https://your-render-service.onrender.com |
+| 🌍 Frontend (Vercel) | https://rent-verse-ai-pbs4.vercel.app/ |
+| ⚡ Backend API (Render) | https://rentverseai.onrender.com/api |
+| 📚 API Documentation | https://rentverseai.onrender.com/docs |
+
 
 ---
 
