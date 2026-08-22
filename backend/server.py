@@ -64,13 +64,17 @@ api_router.include_router(admin_router)
 
 app.include_router(api_router)
 
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 @app.on_event("startup")
 async def startup():
