@@ -116,7 +116,7 @@ export default function LockedContact({ property, onUnlocked }) {
           className="btn-dark"
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Unlock size={16} />}
-          Unlock for ₹29
+          Unlock for ₹1
         </button>
         <button
           data-testid="upgrade-premium-link"
