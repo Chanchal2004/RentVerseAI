@@ -75,7 +75,7 @@ def require_role(*roles):
 
 # Plans config - configurable via env or admin settings
 PLANS = {
-    "unlock": {"amount": 2900, "label": "Unlock 1 property", "duration_days": None},
+    "unlock": {"amount": 100, "label": "Unlock 1 property", "duration_days": None},
     "monthly": {"amount": 9900, "label": "Premium Monthly", "duration_days": 30},
     "quarterly": {"amount": 24900, "label": "Premium 3 Months", "duration_days": 90},
     "yearly": {"amount": 79900, "label": "Premium Yearly", "duration_days": 365},
