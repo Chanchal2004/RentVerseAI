@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import PropertyCard from "../components/PropertyCard";
@@ -312,8 +311,18 @@ export default function Landing() {
       {/* HOW IT WORKS */}
       <section className="bg-white border-y border-warm">
         <div className="max-w-7xl mx-auto px-6 py-24">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest mb-12 max-w-xl">
-            Rent without brokers, dead-ends, or trust issues.
+          <h2 className="how-it-works-title">
+            <span className="how-title-line how-title-line-1">
+              Rent without brokers,
+            </span>
+
+            <span className="how-title-line how-title-line-2">
+              dead-ends, or
+            </span>
+
+            <span className="how-title-line how-title-line-3">
+              trust issues.
+            </span>
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -357,4 +366,3 @@ export default function Landing() {
     </div>
   );
 }
-
