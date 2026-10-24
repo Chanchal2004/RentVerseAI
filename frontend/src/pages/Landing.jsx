@@ -312,17 +312,7 @@ export default function Landing() {
       <section className="bg-white border-y border-warm">
         <div className="max-w-7xl mx-auto px-6 py-24">
           <h2 className="how-it-works-title">
-            <span className="how-title-line how-title-line-1">
-              Rent without brokers,
-            </span>
-
-            <span className="how-title-line how-title-line-2">
-              dead-ends, or
-            </span>
-
-            <span className="how-title-line how-title-line-3">
-              trust issues.
-            </span>
+            Rent without brokers, dead-ends, or trust issues.
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
