@@ -1,4 +1,4 @@
-```jsx
+
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import PropertyCard from "../components/PropertyCard";
@@ -357,4 +357,4 @@ export default function Landing() {
     </div>
   );
 }
-```
+
