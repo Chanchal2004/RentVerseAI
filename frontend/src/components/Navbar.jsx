@@ -24,11 +24,7 @@ export default function Navbar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-forest-2">
-          <Link
-            to="/"
-            data-testid="nav-search"
-            className="hover:text-forest"
-          >
+          <Link to="/" data-testid="nav-search" className="hover:text-forest">
             Search
           </Link>
 
