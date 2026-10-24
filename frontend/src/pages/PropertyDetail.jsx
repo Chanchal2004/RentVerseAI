@@ -47,19 +47,19 @@ export default function PropertyDetail() {
       <p className="text-forest-2 mt-2 flex items-center gap-1"><MapPin size={16} /> {prop.address}, {prop.city}</p>
 
       {/* Gallery */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-12 gap-3 max-h-[60vh]">
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
         {heroPhotos.length === 0 ? (
           <div className="col-span-12 h-80 rounded-xl bg-gray-100 flex items-center justify-center text-muted">
             <Home size={48} />
           </div>
         ) : (
           <>
-            <div className="md:col-span-8">
-              <img src={fileUrl(heroPhotos[0])} alt="" className="w-full h-80 md:h-[500px] rounded-xl object-cover" />
+            <div className="md:col-span-8 min-w-0">
+              <img src={fileUrl(heroPhotos[0])} alt={prop.title || "Property photo"} className="block w-full h-80 md:h-[500px] rounded-xl object-cover" />
             </div>
-            <div className="md:col-span-4 grid grid-cols-2 md:grid-cols-1 gap-3">
+            <div className="md:col-span-4 min-w-0 grid grid-cols-2 md:grid-cols-1 gap-3">
               {heroPhotos.slice(1, 5).map((p, i) => (
-                <img key={i} src={fileUrl(p)} alt="" className="w-full h-32 md:h-[120px] rounded-xl object-cover" />
+                <img key={i} src={fileUrl(p)} alt={`${prop.title || "Property"} photo ${i + 2}`} className="block w-full h-32 md:h-[120px] rounded-xl object-cover" />
               ))}
             </div>
           </>
