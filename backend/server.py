@@ -1,4 +1,4 @@
-```python
+
 """Main FastAPI server."""
 
 import os
@@ -163,4 +163,4 @@ async def startup():
         )
 
     logger.info("RentVerse AI Backend Started Successfully")
-```
+
