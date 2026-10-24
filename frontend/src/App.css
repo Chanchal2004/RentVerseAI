@@ -1,1 +1,70 @@
-/* Empty - global styles live in index.css */
+/* Global styles are maintained in index.css. */
+
+/* RentVerse AI - How It Works Heading Animation */
+
+.how-it-works-title {
+  max-width: 36rem;
+  margin-bottom: 3rem;
+
+  font-family: "Cabinet Grotesk", "Manrope", sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+  color: var(--forest);
+
+  overflow: hidden;
+}
+
+.how-title-line {
+  display: block;
+
+  opacity: 0;
+  transform: translateY(24px);
+
+  animation: rentVerseTitleReveal 0.75s cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+}
+
+.how-title-line-1 {
+  animation-delay: 0.1s;
+}
+
+.how-title-line-2 {
+  animation-delay: 0.3s;
+}
+
+.how-title-line-3 {
+  color: var(--terracotta);
+  animation-delay: 0.5s;
+}
+
+@keyframes rentVerseTitleReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .how-it-works-title {
+    font-size: clamp(1.8rem, 7vw, 2.4rem);
+    line-height: 1.15;
+    margin-bottom: 2rem;
+  }
+}
+
+/* Respect reduced-motion accessibility preferences */
+@media (prefers-reduced-motion: reduce) {
+  .how-title-line {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
