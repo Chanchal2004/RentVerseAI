@@ -1,3 +1,4 @@
+```jsx
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import PropertyCard from "../components/PropertyCard";
@@ -7,6 +8,7 @@ import {
   ShieldCheck,
   KeyRound,
   Calendar,
+  RotateCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -39,7 +41,7 @@ export default function Landing() {
 
     try {
       const { data } = await api.get("/properties", { params });
-      setItems(Array.isArray(data.items) ? data.items : []);
+      setItems(data.items || []);
     } catch {
       setItems([]);
     }
@@ -49,28 +51,32 @@ export default function Landing() {
 
   useEffect(() => {
     fetchProps();
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const clearFilters = async () => {
+  const clearFilters = () => {
     setCity("");
     setQ("");
     setMaxRent("");
     setRooms("");
     setLoading(true);
 
-    try {
-      const { data } = await api.get("/properties");
-      setItems(Array.isArray(data.items) ? data.items : []);
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
+    api
+      .get("/properties")
+      .then(({ data }) => setItems(data.items || []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  };
+
+  const onSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      fetchProps();
     }
   };
 
   return (
     <div>
+      {/* HERO SECTION */}
       <section className="relative section-pad">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
           <div className="md:col-span-7">
@@ -85,9 +91,8 @@ export default function Landing() {
             </h1>
 
             <p className="mt-6 text-lg text-forest-2 max-w-lg leading-relaxed">
-              RentVerse AI helps tenants find homes directly from
-              KYC-verified owners, compare rents, search by location and
-              book visits in one place.
+              Discover rental homes with smart search, clearer pricing,
+              verified-owner checks, and visit scheduling — all in one place.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -130,42 +135,49 @@ export default function Landing() {
           <div className="md:col-span-5 grid grid-cols-6 grid-rows-6 gap-3 h-[520px]">
             <img
               src="https://images.pexels.com/photos/9308434/pexels-photo-9308434.jpeg"
-              alt="Home interior"
+              alt="Rental home interior"
               className="col-span-4 row-span-4 rounded-xl object-cover w-full h-full"
             />
 
             <img
               src="https://images.pexels.com/photos/7148779/pexels-photo-7148779.jpeg"
-              alt="Living space"
+              alt="Home interior"
               className="col-span-2 row-span-3 rounded-xl object-cover w-full h-full"
             />
 
             <img
               src="https://images.pexels.com/photos/8438253/pexels-photo-8438253.jpeg"
-              alt="Modern home"
+              alt="Living space"
               className="col-span-2 row-span-3 rounded-xl object-cover w-full h-full"
             />
 
             <img
               src="https://images.unsplash.com/photo-1542559204-832ecc9bbb88"
-              alt="Rental home"
+              alt="Modern home"
               className="col-span-6 row-span-2 rounded-xl object-cover w-full h-full"
             />
           </div>
         </div>
       </section>
 
-      <section id="search" className="max-w-7xl mx-auto px-6 -mt-6">
+      {/* SEARCH SECTION */}
+      <section
+        id="search"
+        className="max-w-7xl mx-auto px-6 -mt-6"
+      >
         <div className="bg-white border border-warm rounded-2xl p-4 md:p-6 shadow-lg shadow-forest/5">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
             <div className="md:col-span-4">
-              <label className="label-overline mb-1 block">City</label>
+              <label className="label-overline mb-1 block">
+                City
+              </label>
 
               <select
                 data-testid="search-city"
                 className="input-field"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                onKeyDown={onSearchKeyDown}
               >
                 <option value="">All cities</option>
 
@@ -179,18 +191,16 @@ export default function Landing() {
 
             <div className="md:col-span-4">
               <label className="label-overline mb-1 block">
-                Keyword / area
+                Search
               </label>
 
               <input
                 data-testid="search-query"
                 className="input-field"
-                placeholder="e.g. 2BHK, Dwarka, near metro"
+                placeholder="e.g. 2BHK near Koramangala"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") fetchProps();
-                }}
+                onKeyDown={onSearchKeyDown}
               />
             </div>
 
@@ -202,16 +212,18 @@ export default function Landing() {
               <input
                 data-testid="search-max-rent"
                 type="number"
-                min="0"
                 className="input-field"
                 placeholder="₹"
                 value={maxRent}
                 onChange={(e) => setMaxRent(e.target.value)}
+                onKeyDown={onSearchKeyDown}
               />
             </div>
 
             <div className="md:col-span-1">
-              <label className="label-overline mb-1 block">BHK</label>
+              <label className="label-overline mb-1 block">
+                BHK
+              </label>
 
               <select
                 data-testid="search-bhk"
@@ -234,39 +246,50 @@ export default function Landing() {
                 data-testid="search-submit"
                 onClick={fetchProps}
                 className="btn-primary w-full justify-center"
-                aria-label="Search properties"
-                title="Search properties"
+                aria-label="Search homes"
+                title="Search homes"
               >
                 <Search size={16} />
+                <span className="sr-only">Search</span>
               </button>
             </div>
-          </div>
-
-          <div className="flex justify-end mt-3">
-            <button
-              type="button"
-              className="text-sm font-semibold text-forest-2 underline hover:text-forest"
-              onClick={clearFilters}
-            >
-              Clear all filters
-            </button>
           </div>
         </div>
       </section>
 
+      {/* PROPERTY RESULTS */}
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="flex items-baseline justify-between mb-8">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest">
-            Live listings
-          </h2>
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest">
+              Homes for you
+            </h2>
 
-          <span className="text-forest-2 text-sm">
-            {items.length} home{items.length !== 1 ? "s" : ""}
-          </span>
+            <p className="text-sm text-forest-2 mt-1">
+              Search by location, keywords, budget or BHK.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-forest-2 text-sm">
+              {items.length} result{items.length !== 1 ? "s" : ""}
+            </span>
+
+            <button
+              onClick={clearFilters}
+              className="btn-secondary text-sm py-2"
+              title="Clear all search filters"
+            >
+              <RotateCcw size={14} />
+              Clear
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <div className="text-forest-2">Loading properties…</div>
+          <div className="text-forest-2">
+            Loading properties…
+          </div>
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-warm bg-white p-12 text-center text-forest-2">
             <div className="text-forest font-semibold mb-1">
@@ -286,6 +309,7 @@ export default function Landing() {
         )}
       </section>
 
+      {/* HOW IT WORKS */}
       <section className="bg-white border-y border-warm">
         <div className="max-w-7xl mx-auto px-6 py-24">
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-forest mb-12 max-w-xl">
@@ -318,9 +342,13 @@ export default function Landing() {
                   {f.icon}
                 </div>
 
-                <h3 className="text-xl font-semibold mb-2">{f.title}</h3>
+                <h3 className="text-xl font-semibold mb-2">
+                  {f.title}
+                </h3>
 
-                <p className="text-forest-2 leading-relaxed">{f.body}</p>
+                <p className="text-forest-2 leading-relaxed">
+                  {f.body}
+                </p>
               </div>
             ))}
           </div>
@@ -329,3 +357,4 @@ export default function Landing() {
     </div>
   );
 }
+```
