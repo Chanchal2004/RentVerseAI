@@ -1,147 +1,131 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { toast } from "sonner";
+import { Lock, Unlock, Crown, Loader2 } from "lucide-react";
 import { useAuth } from "../lib/auth";
-import {
-  Lock,
-  Phone,
-  Mail,
-  Crown,
-  CheckCircle,
-  Loader2,
-} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function LockedContact({ property }) {
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
+export default function LockedContact({ property, onUnlocked }) {
   const { user } = useAuth();
-
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const nav = useNavigate();
 
-  const contactUnlocked = Boolean(property?.contact_unlocked);
-  const phone = property?.contact_phone;
-  const email = property?.contact_email;
-
-  const unlockContact = async () => {
-    if (!user) {
-      window.location.href = "/login";
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      await api.post(`/payments/unlock/${property.id}`);
-
-      // Reload the current page so the contact data is fetched again.
-      window.location.reload();
-    } catch (err) {
-      setError(
-        err?.response?.data?.detail ||
-          "Unable to unlock contact details. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (contactUnlocked && (phone || email)) {
+  if (property.contact_unlocked) {
     return (
-      <div className="rounded-xl border border-warm bg-white p-5 space-y-3">
-        <h3 className="font-bold text-forest flex items-center gap-2">
-          <CheckCircle size={18} />
-          Owner Contact
-        </h3>
-
-        {phone && (
+      <div className="rounded-xl border border-warm bg-olive-bg p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Unlock size={16} className="text-olive" />
+          <span className="label-overline text-olive">Owner Contact</span>
+        </div>
+        <div className="text-forest font-semibold text-lg" data-testid="unlocked-contact-name">
+          {property.owner_name}
+        </div>
+        {property.contact_phone && (
           <a
-            href={`tel:${phone}`}
-            className="flex items-center gap-2 text-forest-2 hover:text-forest break-all"
+            href={`tel:${property.contact_phone}`}
+            data-testid="unlocked-contact-phone"
+            className="text-forest text-lg block mt-1"
           >
-            <Phone size={16} />
-            {phone}
+            📞 {property.contact_phone}
           </a>
         )}
-
-        {email && (
-          <a
-            href={`mailto:${email}`}
-            className="flex items-center gap-2 text-forest-2 hover:text-forest break-all"
-          >
-            <Mail size={16} />
-            {email}
-          </a>
+        {property.contact_email && (
+          <div className="text-forest-2 text-sm mt-1" data-testid="unlocked-contact-email">
+            ✉︎ {property.contact_email}
+          </div>
         )}
       </div>
     );
   }
 
+  const handleUnlock = async () => {
+    if (!user) { nav("/login"); return; }
+    if (user.role !== "tenant") { toast.error("Only tenants can unlock contacts"); return; }
+    setLoading(true);
+    try {
+      const { data: order } = await api.post("/payments/order", {
+        purpose: "unlock",
+        property_id: property.id,
+      });
+      const ok = await loadRazorpayScript();
+      if (!ok) { toast.error("Failed to load payment SDK"); setLoading(false); return; }
+      const rz = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.order_id,
+        name: "RentVerse AI",
+        description: `Unlock contact for ${property.title}`,
+        prefill: { name: user.name, email: user.email, contact: user.phone || "" },
+        theme: { color: "#D26955" },
+        handler: async (resp) => {
+          try {
+            await api.post("/payments/verify", {
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+              purpose: "unlock",
+              property_id: property.id,
+            });
+            toast.success("Contact unlocked!");
+            onUnlocked && onUnlocked();
+          } catch (e) {
+            toast.error("Payment verification failed");
+          }
+        },
+        modal: { ondismiss: () => setLoading(false) },
+      });
+      rz.open();
+    } catch (e) {
+      if (e.response?.status === 503) {
+        toast.error("Payments not yet configured. Contact admin.");
+      } else {
+        toast.error(e.response?.data?.detail || "Failed to start payment");
+      }
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="rounded-xl border border-warm bg-white p-5 space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-xl bg-forest/10 text-forest flex items-center justify-center">
-          <Lock size={20} />
-        </div>
-
-        <div>
-          <h3 className="font-bold text-forest">Owner Contact Details</h3>
-          <p className="text-sm text-forest-2">
-            Unlock contact details to connect with the owner.
-          </p>
-        </div>
+    <div className="relative overflow-hidden rounded-xl border border-warm bg-bone p-6 min-h-[180px]">
+      {/* Placeholder content behind blur */}
+      <div className="pointer-events-none select-none opacity-70">
+        <div className="label-overline mb-2">Owner Contact</div>
+        <div className="h-6 bg-forest/10 rounded w-2/3 mb-2" />
+        <div className="h-5 bg-forest/10 rounded w-1/2" />
       </div>
-
-      <div className="rounded-lg bg-gray-50 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-gray-400">
-          <Phone size={16} />
-          <span>Phone number hidden</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-gray-400">
-          <Mail size={16} />
-          <span>Email address hidden</span>
-        </div>
-      </div>
-
-      {error && (
-        <div className="text-sm text-red-600" role="alert">
-          {error}
-        </div>
-      )}
-
-      {user?.role === "owner" || user?.role === "admin" ? (
-        <p className="text-sm text-forest-2">
-          You are viewing this listing with a property management account.
-        </p>
-      ) : (
+      <div className="locked-blur">
+        <Lock className="text-forest mb-2" size={28} />
+        <div className="text-forest font-bold text-lg mb-1">Contact locked</div>
+        <div className="text-forest-2 text-sm mb-3">Unlock owner phone & email</div>
         <button
-          type="button"
-          onClick={unlockContact}
+          data-testid="unlock-contact-button"
+          onClick={handleUnlock}
           disabled={loading}
-          className="btn-primary w-full flex items-center justify-center gap-2"
+          className="btn-dark"
         >
-          {loading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              Please wait...
-            </>
-          ) : (
-            <>
-              <Crown size={16} />
-              Unlock Contact
-            </>
-          )}
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Unlock size={16} />}
+          Unlock for ₹1
         </button>
-      )}
-
-      {!user && (
-        <p className="text-center text-sm text-forest-2">
-          Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-forest underline">
-            Log in
-          </Link>
-        </p>
-      )}
+        <button
+          data-testid="upgrade-premium-link"
+          onClick={() => nav("/pricing")}
+          className="mt-3 text-sm text-terra font-semibold inline-flex items-center gap-1"
+        >
+          <Crown size={14} /> Or go Premium — unlimited unlocks
+        </button>
+      </div>
     </div>
   );
 }
