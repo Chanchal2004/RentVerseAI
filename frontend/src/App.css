@@ -1,68 +1,62 @@
 /* Global styles are maintained in index.css. */
 
-/* RentVerse AI - How It Works Heading Animation */
+/* RentVerse AI - Single Line Animated Heading */
 
 .how-it-works-title {
-  max-width: 36rem;
-  margin-bottom: 3rem;
+  display: block;
+  width: 100%;
+  margin: 0 0 3rem;
 
   font-family: "Cabinet Grotesk", "Manrope", sans-serif;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.5rem, 3vw, 2.7rem);
   font-weight: 700;
-  line-height: 1.12;
+  line-height: 1.2;
   letter-spacing: -0.045em;
+
   color: var(--forest);
+  background: transparent;
 
+  white-space: nowrap;
   overflow: hidden;
-}
-
-.how-title-line {
-  display: block;
 
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateX(-30px);
 
-  animation: rentVerseTitleReveal 0.75s cubic-bezier(0.22, 1, 0.36, 1)
-    forwards;
+  animation: rentVerseLineReveal 0.9s ease-out forwards;
 }
 
-.how-title-line-1 {
-  animation-delay: 0.1s;
-}
-
-.how-title-line-2 {
-  animation-delay: 0.3s;
-}
-
-.how-title-line-3 {
-  color: var(--terracotta);
-  animation-delay: 0.5s;
-}
-
-@keyframes rentVerseTitleReveal {
+@keyframes rentVerseLineReveal {
   from {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateX(-30px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 
-/* Mobile responsiveness */
-@media (max-width: 640px) {
+/* Tablet screens */
+@media (max-width: 900px) {
   .how-it-works-title {
-    font-size: clamp(1.8rem, 7vw, 2.4rem);
-    line-height: 1.15;
+    font-size: clamp(1.3rem, 3.2vw, 2rem);
+    letter-spacing: -0.04em;
+  }
+}
+
+/* Mobile screens */
+@media (max-width: 600px) {
+  .how-it-works-title {
+    font-size: clamp(0.9rem, 3.4vw, 1.25rem);
+    letter-spacing: -0.035em;
     margin-bottom: 2rem;
   }
 }
 
-/* Respect reduced-motion accessibility preferences */
+/* Accessibility: respect reduced-motion preferences */
 @media (prefers-reduced-motion: reduce) {
-  .how-title-line {
+  .how-it-works-title {
     animation: none;
     opacity: 1;
     transform: none;
