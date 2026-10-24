@@ -1,4 +1,6 @@
+```python
 """Main FastAPI server."""
+
 import os
 import logging
 from pathlib import Path
@@ -28,6 +30,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -35,7 +38,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
-api_router = APIRouter(prefix="/api")
+# Main API router
+api_router = APIRouter()
 
 
 @api_router.get("/")
@@ -53,6 +57,7 @@ async def health():
     }
 
 
+# Register all application routes
 api_router.include_router(auth_router)
 api_router.include_router(files_router)
 api_router.include_router(props_router)
@@ -62,10 +67,14 @@ api_router.include_router(visits_router)
 api_router.include_router(chat_router)
 api_router.include_router(admin_router)
 
+# Support both URL formats:
+# /auth/register and /api/auth/register
+# /properties and /api/properties
 app.include_router(api_router)
+app.include_router(api_router, prefix="/api")
 
 
-
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -75,19 +84,23 @@ app.add_middleware(
 )
 
 
-
 @app.on_event("startup")
 async def startup():
-
+    # Initialize file storage
     try:
         init_storage()
         logger.info("Storage initialized successfully")
     except Exception as e:
-        logger.warning("Storage initialization skipped: %s", e)
+        logger.warning(
+            "Storage initialization skipped: %s",
+            e,
+        )
 
-    # Database Indexes
+    # Database indexes
     await db.users.create_index("email", unique=True)
-    await db.properties.create_index([("status", 1), ("created_at", -1)])
+    await db.properties.create_index(
+        [("status", 1), ("created_at", -1)]
+    )
     await db.properties.create_index("owner_id")
     await db.properties.create_index("city")
 
@@ -113,7 +126,7 @@ async def startup():
         unique=True,
     )
 
-    # Create Admin (only if not exists)
+    # Create admin account if it doesn't exist
     admin_email = os.getenv(
         "ADMIN_EMAIL",
         "admin@rentverseai.com",
@@ -125,9 +138,7 @@ async def startup():
     )
 
     existing = await db.users.find_one(
-        {
-            "email": admin_email
-        }
+        {"email": admin_email}
     )
 
     if not existing:
@@ -146,6 +157,10 @@ async def startup():
             }
         )
 
-        logger.info("Admin account created: %s", admin_email)
+        logger.info(
+            "Admin account created: %s",
+            admin_email,
+        )
 
     logger.info("RentVerse AI Backend Started Successfully")
+```
