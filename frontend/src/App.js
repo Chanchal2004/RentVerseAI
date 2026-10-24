@@ -1,3 +1,4 @@
+```jsx
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -20,6 +21,7 @@ function Shell() {
   return (
     <>
       <Navbar />
+
       <main className="min-h-[70vh]">
         <Outlet />
       </main>
@@ -34,6 +36,7 @@ function Shell() {
             <a href="/pricing" className="hover:text-forest">
               Premium
             </a>
+
             <a href="/list-property" className="hover:text-forest">
               List a property
             </a>
@@ -75,7 +78,9 @@ function App() {
         <Routes>
           <Route element={<Shell />}>
             <Route path="/" element={<Landing />} />
+
             <Route path="/login" element={<Login />} />
+
             <Route path="/register" element={<Register />} />
 
             <Route
@@ -147,3 +152,4 @@ function App() {
 }
 
 export default App;
+```
