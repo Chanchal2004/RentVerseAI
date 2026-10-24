@@ -1,10 +1,12 @@
-"""Admin panel routes."""
+"""Admin panel routes for RentVerse AI."""
+
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from typing import Optional
 
 from models import AdminActionRequest, now_iso
 from deps import db, require_role
+
 
 router = APIRouter(
     prefix="/admin",
@@ -12,6 +14,10 @@ router = APIRouter(
     dependencies=[Depends(require_role("admin"))],
 )
 
+
+# --------------------------------------------------
+# ADMIN DASHBOARD STATISTICS
+# --------------------------------------------------
 
 @router.get("/stats")
 async def stats():
@@ -30,12 +36,7 @@ async def stats():
 
     revenue_agg = await db.payments.aggregate([
         {"$match": {"status": "paid"}},
-        {
-            "$group": {
-                "_id": None,
-                "total": {"$sum": "$amount"},
-            }
-        },
+        {"$group": {"_id": None, "total": {"$sum": "$amount"}}},
     ]).to_list(1)
 
     revenue = revenue_agg[0]["total"] if revenue_agg else 0
@@ -57,43 +58,47 @@ async def stats():
     }
 
 
+# --------------------------------------------------
+# LIST ALL PROPERTIES
+# --------------------------------------------------
+
 @router.get("/properties")
 async def list_all_properties(
     status: Optional[str] = None,
-    limit: int = Query(100, le=200),
+    limit: int = Query(100, ge=1, le=200),
 ):
     query = {}
 
     if status:
+        allowed_statuses = {
+            "pending",
+            "approved",
+            "rejected",
+            "suspended",
+            "needs_info",
+        }
+
+        if status not in allowed_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid property status",
+            )
+
         query["status"] = status
 
-    items = (
-        await db.properties.find(query, {"_id": 0})
-        .sort("created_at", -1)
-        .limit(limit)
-        .to_list(limit)
-    )
+    properties = await db.properties.find(
+        query,
+        {"_id": 0},
+    ).sort(
+        "created_at", -1
+    ).limit(limit).to_list(limit)
 
-    return items
+    return properties
 
 
-@router.delete("/properties/{prop_id}")
-async def delete_admin_property(prop_id: str):
-    """Permanently delete a property. This router requires admin access."""
-
-    result = await db.properties.delete_one({"id": prop_id})
-
-    if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="Property not found",
-        )
-
-    return {
-        "ok": True,
-        "id": prop_id,
-    }
-
+# --------------------------------------------------
+# APPROVE / REJECT / SUSPEND PROPERTY
+# --------------------------------------------------
 
 @router.post("/properties/{prop_id}/action")
 async def property_action(
@@ -101,12 +106,13 @@ async def property_action(
     payload: AdminActionRequest,
     admin=Depends(require_role("admin")),
 ):
-    prop = await db.properties.find_one({"id": prop_id})
+    property_doc = await db.properties.find_one({"id": prop_id})
 
-    if not prop:
-        raise HTTPException(status_code=404)
-
-    action = payload.action
+    if not property_doc:
+        raise HTTPException(
+            status_code=404,
+            detail="Property not found",
+        )
 
     status_map = {
         "approve": "approved",
@@ -115,6 +121,8 @@ async def property_action(
         "request_info": "needs_info",
     }
 
+    action = payload.action
+
     if action not in status_map:
         raise HTTPException(
             status_code=400,
@@ -122,6 +130,7 @@ async def property_action(
         )
 
     new_status = status_map[action]
+    timestamp = now_iso()
 
     await db.properties.update_one(
         {"id": prop_id},
@@ -130,17 +139,54 @@ async def property_action(
                 "status": new_status,
                 "admin_note": payload.note,
                 "reviewed_by": admin["id"],
-                "reviewed_at": now_iso(),
-                "updated_at": now_iso(),
+                "reviewed_at": timestamp,
+                "updated_at": timestamp,
             }
         },
     )
 
     return {
         "ok": True,
+        "property_id": prop_id,
         "status": new_status,
     }
 
+
+# --------------------------------------------------
+# DELETE PROPERTY
+# --------------------------------------------------
+
+@router.delete("/properties/{prop_id}")
+async def delete_property(
+    prop_id: str,
+    admin=Depends(require_role("admin")),
+):
+    property_doc = await db.properties.find_one({"id": prop_id})
+
+    if not property_doc:
+        raise HTTPException(
+            status_code=404,
+            detail="Property not found",
+        )
+
+    result = await db.properties.delete_one({"id": prop_id})
+
+    if result.deleted_count != 1:
+        raise HTTPException(
+            status_code=500,
+            detail="Property could not be deleted",
+        )
+
+    return {
+        "ok": True,
+        "message": "Property deleted successfully",
+        "property_id": prop_id,
+    }
+
+
+# --------------------------------------------------
+# LIST KYC SUBMISSIONS
+# --------------------------------------------------
 
 @router.get("/kyc")
 async def list_kyc(status: Optional[str] = None):
@@ -149,14 +195,19 @@ async def list_kyc(status: Optional[str] = None):
     if status:
         query["status"] = status
 
-    items = (
-        await db.kyc.find(query, {"_id": 0})
-        .sort("submitted_at", -1)
-        .to_list(200)
-    )
+    submissions = await db.kyc.find(
+        query,
+        {"_id": 0},
+    ).sort(
+        "submitted_at", -1
+    ).limit(200).to_list(200)
 
-    return items
+    return submissions
 
+
+# --------------------------------------------------
+# APPROVE / REJECT KYC
+# --------------------------------------------------
 
 @router.post("/kyc/{kyc_id}/action")
 async def kyc_action(
@@ -164,20 +215,27 @@ async def kyc_action(
     payload: AdminActionRequest,
     admin=Depends(require_role("admin")),
 ):
-    doc = await db.kyc.find_one({"id": kyc_id})
+    kyc_doc = await db.kyc.find_one({"id": kyc_id})
 
-    if not doc:
-        raise HTTPException(status_code=404)
-
-    action = payload.action
-
-    if action not in {"approve", "reject"}:
+    if not kyc_doc:
         raise HTTPException(
-            status_code=400,
-            detail="Invalid action",
+            status_code=404,
+            detail="KYC submission not found",
         )
 
-    new_status = "approved" if action == "approve" else "rejected"
+    if payload.action not in {"approve", "reject"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid KYC action",
+        )
+
+    new_status = (
+        "approved"
+        if payload.action == "approve"
+        else "rejected"
+    )
+
+    timestamp = now_iso()
 
     await db.kyc.update_one(
         {"id": kyc_id},
@@ -185,42 +243,63 @@ async def kyc_action(
             "$set": {
                 "status": new_status,
                 "reviewer_note": payload.note,
-                "reviewed_at": now_iso(),
+                "reviewed_at": timestamp,
                 "reviewer_id": admin["id"],
             }
         },
     )
 
     await db.users.update_one(
-        {"id": doc["user_id"]},
-        {"$set": {"kyc_status": new_status}},
+        {"id": kyc_doc["user_id"]},
+        {
+            "$set": {
+                "kyc_status": new_status,
+            }
+        },
     )
 
     return {
         "ok": True,
+        "kyc_id": kyc_id,
         "status": new_status,
     }
 
+
+# --------------------------------------------------
+# LIST USERS
+# --------------------------------------------------
 
 @router.get("/users")
 async def list_users(role: Optional[str] = None):
     query = {}
 
     if role:
+        allowed_roles = {"admin", "owner", "tenant"}
+
+        if role not in allowed_roles:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid user role",
+            )
+
         query["role"] = role
 
-    items = (
-        await db.users.find(
-            query,
-            {"_id": 0, "password_hash": 0},
-        )
-        .sort("created_at", -1)
-        .limit(500)
-        .to_list(500)
-    )
+    users = await db.users.find(
+        query,
+        {
+            "_id": 0,
+            "password_hash": 0,
+        },
+    ).sort(
+        "created_at", -1
+    ).limit(500).to_list(500)
 
-    return items
+    return users
 
+
+# --------------------------------------------------
+# LIST PAYMENTS
+# --------------------------------------------------
 
 @router.get("/payments")
 async def list_payments(status: Optional[str] = None):
@@ -229,11 +308,11 @@ async def list_payments(status: Optional[str] = None):
     if status:
         query["status"] = status
 
-    items = (
-        await db.payments.find(query, {"_id": 0})
-        .sort("created_at", -1)
-        .limit(200)
-        .to_list(200)
-    )
+    payments = await db.payments.find(
+        query,
+        {"_id": 0},
+    ).sort(
+        "created_at", -1
+    ).limit(200).to_list(200)
 
-    return items
+    return payments
