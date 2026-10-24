@@ -1,4 +1,4 @@
-```jsx
+
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -152,4 +152,4 @@ function App() {
 }
 
 export default App;
-```
+
